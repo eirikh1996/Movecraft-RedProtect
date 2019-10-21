@@ -1,0 +1,4 @@
+locale: en
+blockMoveOnNoBuild: true
+preventCraftExitOnNoExit: true
+blockSinkOnNoPvP: true

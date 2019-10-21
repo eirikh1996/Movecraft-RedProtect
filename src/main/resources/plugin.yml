@@ -1,0 +1,7 @@
+name: Movecraft-RedProtect
+main: io.github.eirikh1996.movecraftredprotect.MRPMain
+version: ${project.version}
+api-version: 1.13
+depend:
+  - Movecraft
+  - RedProtect
