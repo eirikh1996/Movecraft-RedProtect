@@ -29,8 +29,8 @@ public class UpdateManager extends BukkitRunnable {
                 if (newVersion > currentVersion){
 
                     for (Player p : Bukkit.getOnlinePlayers()){
-                        if (!p.hasPermission("bpb.update")){
-                            p.sendMessage(I18nSupport.getInternationalisedString("Update - Update available"));
+                        if (!p.hasPermission("mrp.update")){
+                            p.sendMessage(I18nSupport.getInternationalisedString("Update - Update available") + "https://dev.bukkit.org/projects/movecraft-redprotect/files");
                         }
                     }
                     return;
@@ -60,7 +60,7 @@ public class UpdateManager extends BukkitRunnable {
 
     public double checkUpdate(double currentVersion){
         try {
-            URL url = new URL("https://servermods.forgesvc.net/servermods/files?projectids=342136");
+            URL url = new URL("https://servermods.forgesvc.net/servermods/files?projectids=348956");
             URLConnection conn = url.openConnection();
             conn.setReadTimeout(5000);
             conn.addRequestProperty("User-Agent", "Movecraft-RedProtect Update Checker");

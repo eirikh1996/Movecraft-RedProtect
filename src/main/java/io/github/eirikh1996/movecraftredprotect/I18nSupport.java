@@ -9,12 +9,13 @@ public class I18nSupport {
     private static Properties languageFile;
     public static boolean initialize(){
         languageFile = new Properties();
-        File file = new File(MRPMain.getInstance().getDataFolder().getAbsolutePath() + "/localisation/mrplang_" + Settings.locale + ".properties");
+        File file = new File(MRPMain.getInstance().getDataFolder().getAbsolutePath() + "/localisation/lang_" + Settings.locale + ".properties");
         try {
             languageFile.load(new FileInputStream(file));
             return true;
         } catch (IOException e) {
             e.printStackTrace();
+            MRPMain.getInstance().getServer().getPluginManager().disablePlugin(MRPMain.getInstance());
             return false;
         }
     }

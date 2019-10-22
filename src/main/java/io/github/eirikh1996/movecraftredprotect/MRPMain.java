@@ -10,8 +10,11 @@ import net.countercraft.movecraft.events.CraftSinkEvent;
 import net.countercraft.movecraft.events.CraftTranslateEvent;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import java.io.File;
 
 public class MRPMain extends JavaPlugin implements Listener {
     private RedProtect redProtectPlugin;
@@ -24,6 +27,9 @@ public class MRPMain extends JavaPlugin implements Listener {
     public void onEnable(){
         UpdateManager.initialize();
         loadConfig();
+        if (!I18nSupport.initialize()){
+            return;
+        }
         Plugin mPlug = getServer().getPluginManager().getPlugin("Movecraft");
         if (mPlug instanceof Movecraft){
             movecraftPlugin = (Movecraft) mPlug;
@@ -44,7 +50,7 @@ public class MRPMain extends JavaPlugin implements Listener {
         }
         getRedProtectPlugin().getAPI().addFlag(ALLOW_CRAFTS_FLAG, false, false);
         getServer().getPluginManager().registerEvents(this, this);
-
+        UpdateManager.getInstance().start();
     }
 
     @Override
@@ -54,6 +60,9 @@ public class MRPMain extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onCraftTranslate(CraftTranslateEvent event){
+        if (event.getCraft().getSinking()){
+            return;
+        }
         //Check the current region the craft is in
         Region current = null;
         for (MovecraftLocation ml : event.getOldHitBox()){
@@ -81,16 +90,27 @@ public class MRPMain extends JavaPlugin implements Listener {
             destination = test;
             break;
         }
+        if (current != null && current != destination &&
+                Settings.preventCraftExitOnNoExit && !current.canExit(event.getCraft().getNotificationPlayer())){
+                event.setFailMessage(I18nSupport.getInternationalisedString("Translation - Failed not allowed to exit"));
+                event.setCancelled(true);
+                return;
+
+        }
         if (destination == null){
             return;
         }
-        if (!destination.getFlagBool(ALLOW_CRAFTS_FLAG) && !event.getCraft().getNotificationPlayer().hasPermission("redprotect.flag.admin."+ALLOW_CRAFTS_FLAG.toLowerCase()+".bypass")){
-            event.setFailMessage(I18nSupport.getInternationalisedString("Translation - Failed Crafts not allowed"));
-            event.setCancelled(true);
-        }
-        else if (Settings.blockMoveOnNoBuild && !destination.canBuild(event.getCraft().getNotificationPlayer())){
-            event.setFailMessage(I18nSupport.getInternationalisedString("Translation - Failed Build not allowed"));
-            event.setCancelled(true);
+        if (Settings.blockMoveOnNoBuild) {
+            if (!destination.canBuild(event.getCraft().getNotificationPlayer()) && !destination.getFlagBool(ALLOW_CRAFTS_FLAG))
+            {
+                event.setFailMessage(I18nSupport.getInternationalisedString("Translation - Failed Build not allowed"));
+                event.setCancelled(true);
+            }
+        } else {
+            if (!destination.getFlagBool(ALLOW_CRAFTS_FLAG)){
+                event.setFailMessage(I18nSupport.getInternationalisedString("Translation - Failed Crafts not allowed"));
+                event.setCancelled(true);
+            }
         }
 
 
@@ -98,6 +118,9 @@ public class MRPMain extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onCraftRotate(CraftRotateEvent event){
+        if (event.getCraft().getSinking()){
+            return;
+        }
         //Check the current region the craft is in
         Region current = null;
         for (MovecraftLocation ml : event.getOldHitBox()){
@@ -107,13 +130,6 @@ public class MRPMain extends JavaPlugin implements Listener {
             }
             current = test;
             break;
-        }
-        if (current != null){
-            if (Settings.preventCraftExitOnNoExit && !current.canExit(event.getCraft().getNotificationPlayer())){
-                event.setFailMessage(I18nSupport.getInternationalisedString("Rotation - Failed not allowed to exit"));
-                event.setCancelled(true);
-                return;
-            }
         }
         //Check the region the craft will enter
         Region destination = null;
@@ -125,16 +141,27 @@ public class MRPMain extends JavaPlugin implements Listener {
             destination = test;
             break;
         }
+        if (current != null && current != destination &&
+                Settings.preventCraftExitOnNoExit && !current.canExit(event.getCraft().getNotificationPlayer())){
+            event.setFailMessage(I18nSupport.getInternationalisedString("Rotation - Failed not allowed to exit"));
+            event.setCancelled(true);
+            return;
+
+        }
         if (destination == null){
             return;
         }
-        if (!destination.getFlagBool(ALLOW_CRAFTS_FLAG) && !event.getCraft().getNotificationPlayer().hasPermission("redprotect.flag.admin."+ALLOW_CRAFTS_FLAG.toLowerCase()+".bypass")){
-            event.setFailMessage(I18nSupport.getInternationalisedString("Rotation - Failed Crafts not allowed"));
-            event.setCancelled(true);
-        }
-        else if (Settings.blockMoveOnNoBuild && !destination.canBuild(event.getCraft().getNotificationPlayer())){
-            event.setFailMessage(I18nSupport.getInternationalisedString("Rotation - Failed Build not allowed"));
-            event.setCancelled(true);
+        if (Settings.blockMoveOnNoBuild) {
+            if (!destination.canBuild(event.getCraft().getNotificationPlayer()) && !destination.getFlagBool(ALLOW_CRAFTS_FLAG))
+            {
+                event.setFailMessage(I18nSupport.getInternationalisedString("Rotation - Failed Build not allowed"));
+                event.setCancelled(true);
+            }
+        } else {
+            if (!destination.getFlagBool(ALLOW_CRAFTS_FLAG)){
+                event.setFailMessage(I18nSupport.getInternationalisedString("Rotation - Failed Crafts not allowed"));
+                event.setCancelled(true);
+            }
         }
     }
 
@@ -158,12 +185,33 @@ public class MRPMain extends JavaPlugin implements Listener {
         }
     }
 
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event){
+        if (!event.getPlayer().hasPermission("mrp.update")){
+            return;
+        }
+        UpdateManager updateManager = UpdateManager.getInstance();
+        if (updateManager.checkUpdate(updateManager.getCurrentVersion()) <= updateManager.getCurrentVersion()){
+            return;
+        }
+        event.getPlayer().sendMessage(I18nSupport.getInternationalisedString("Update - Update available") + "https://dev.bukkit.org/projects/movecraft-redprotect/files");
+    }
+
     private void loadConfig(){
         saveDefaultConfig();
         Settings.locale = getConfig().getString("locale", "en");
         Settings.preventCraftExitOnNoExit = getConfig().getBoolean("preventCraftExitOnNoExit", false);
         Settings.blockMoveOnNoBuild = getConfig().getBoolean("blockMoveOnNoBuild", true);
         Settings.blockSinkOnNoPvP = getConfig().getBoolean("blockSinkOnNoPvP", true);
+        final String[] LOCALES = {"en", "no"};
+        for (String locale : LOCALES){
+            String fileName = "localisation/lang_" + locale + ".properties";
+            File lf = new File(getDataFolder().getAbsolutePath() + fileName);
+            if (lf.exists()){
+                continue;
+            }
+            saveResource(fileName, false);
+        }
     }
 
     public static synchronized MRPMain getInstance() {
